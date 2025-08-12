@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Mouse & Cheese — Indian Contract Act Quiz</title>
+<style>
+  :root{
+    --bg:#fbf8f3; --panel:#ffffff; --accent:#f6aa1c; --muted:#6b6b6b;
+    --tile:#ffffff; --wall:#2f3b4a; --mouse:#3b82f6; --cheese:#ffda4a;
+  }
+  body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#1f2937;background:linear-gradient(180deg,var(--bg),#eef2ff);display:flex;flex-direction:column;min-height:100vh;align-items:center}
+  .app{width:100%;max-width:960px;padding:12px;box-sizing:border-box}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  h1{font-size:18px;margin:0}
+  .controls-row{display:flex;gap:8px;align-items:center}
+  .status{background:var(--panel);padding:8px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(16,24,40,0.06);display:flex;gap:12px;align-items:center}
+  .status div{font-weight:600}
+  .game-wrap{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+  canvas{background:linear-gradient(#ffffff,#f7fbff);border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,0.06);touch-action:none}
+  .ui{width:280px;max-width:40vw;min-width:240px}
+  .panel{background:var(--panel);padding:12px;border-radius:12px;box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+  .big{font-size:20px;font-weight:700;margin:6px 0}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .arrow{font-size:24px;padding:12px;border-radius:10px;background:#fff;border:1px solid #eee;min-width:60px;text-align:center;box-shadow:0 4px 10px rgba(2,6,23,0.06)}
+  button.btn{background:var(--accent);border:none;color:#06122b;padding:8px 12px;border-radius:10px;font-weight:700;cursor:pointer}
+  .muted{color:var(--muted);font-size:13px}
+  .small{font-size:12px;color:#475569}
+  .footer{margin-top:12px;font-size:13px;color:#475569;text-align:center}
+  /* modal */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.45);z-index:200}
+  .card{background:#fff;padding:16px;border-radius:12px;max-width:720px;width:92%;box-shadow:0 20px 50px rgba(2,6,23,0.3)}
+  .choices{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .choice-btn{background:#f8fafc;border:1px solid #e6eef8;padding:10px;border-radius:10px;text-align:left;cursor:pointer}
+  .choice-btn.correct{background:#ecfdf5;border-color:#86efac}
+  .choice-btn.wrong{background:#fff1f2;border-color:#fda4af}
+  .small-muted{font-size:13px;color:#475569;margin-top:8px}
+  @media (max-width:680px){
+    .ui{width:100%}
+    canvas{width:94vw;height:94vw}
+    .arrow{min-width:56px;padding:10px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🐭 Mouse & Cheese — Indian Contract Act Quiz (1872)</h1>
+    <div class="controls-row">
+      <div class="status">
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+        <div id="qcount">Q: 0 / 20</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="game-wrap">
+    <canvas id="maze" width="540" height="540"></canvas>
+
+    <div class="ui">
+      <div class="panel">
+        <div class="big">Controls</div>
+        <div class="row" style="justify-content:center;">
+          <div class="arrow" id="upBtn">⬆️</div>
+        </div>
+        <div class="row" style="justify-content:center;margin-top:6px;">
+          <div class="arrow" id="leftBtn">⬅️</div>
+          <div class="arrow" id="downBtn">⬇️</div>
+          <div class="arrow" id="rightBtn">➡️</div>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div class="small muted">Goal: Reach the cheese 🧀 at the top-right while answering checkpoint questions. Wrong answers cost a life. 20 questions per round.</div>
+
+        <div style="height:12px"></div>
+        <div class="row">
+          <button class="btn" id="restart">Restart Game</button>
+          <button class="btn" id="help">How to play</button>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="panel">
+        <div class="big">Game Info</div>
+        <div class="small">Maze: grid-based randomly generated</div>
+        <div class="small">Checkpoints: step on them to answer a question</div>
+        <div style="height:8px"></div>
+        <div id="statusText" class="small-muted">Good luck!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Made for learning — Indian Contract Act, 1872 (Contract, Offer, Acceptance, Consideration, Capacity, Free Consent, Bailment, Pledge, Guarantee, Agency, Indemnity).</div>
+</div>
+
+<!-- Modal for quiz -->
+<div id="modal" class="modal" role="dialog" aria-modal="true">
+  <div class="card">
+    <div id="qtitle" style="font-weight:800;font-size:18px"></div>
+    <div id="qdiff" class="small-muted" style="margin-top:6px"></div>
+    <div id="choices" class="choices"></div>
+    <div style="margin-top:12px; text-align:right;">
+      <button class="btn" id="skipBtn">Skip (treat as wrong)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== Settings ========== */
+const COLS = 15, ROWS = 15, CELL = 36;
+const CHECKPOINT_COUNT = 12;
+const QUESTIONS_PER_GAME = 20;
+let lives = 3;
+
+/* ========== Question pool (50 items) ========== */
+/* Full 50-question bank included */
+const QUESTION_POOL = [
+  {q:"Which section defines 'contract' in Indian Contract Act, 1872?", opts:["Section 2(h)","Section 10","Section 5","Section 1"], ans:"Section 2(h)", diff:"easy"},
+  {q:"An agreement enforceable by law is called a:", opts:["Promise","Contract","Offer","Proposal"], ans:"Contract", diff:"easy"},
+  {q:"Minimum age to enter a valid contract in India is:", opts:["18 years","16 years","21 years","20 years"], ans:"18 years", diff:"easy"},
+  {q:"Consideration in a contract means:", opts:["Something in return","A gift","Free promise","Mistake"], ans:"Something in return", diff:"easy"},
+  {q:"Who is competent to contract?", opts:["Major and sound mind","Minor","Person of unsound mind","All"], ans:"Major and sound mind", diff:"easy"},
+  {q:"Offer/proposal is defined in which section?", opts:["Section 2(a)","Section 2(b)","Section 2(c)","Section 2(d)"], ans:"Section 2(a)", diff:"easy"},
+  {q:"Acceptance is defined in which section?", opts:["Section 2(b)","Section 2(c)","Section 2(d)","Section 2(h)"], ans:"Section 2(b)", diff:"easy"},
+  {q:"Consideration is defined in which section?", opts:["Section 2(d)","Section 2(h)","Section 3","Section 4"], ans:"Section 2(d)", diff:"easy"},
+  {q:"Communication of proposal is in which section?", opts:["Section 4","Section 5","Section 6","Section 7"], ans:"Section 4", diff:"easy"},
+  {q:"A minor's agreement is generally:", opts:["Void","Valid","Voidable","Enforceable"], ans:"Void", diff:"easy"},
+  {q:"An agreement without consideration is:", opts:["Void","Valid","Voidable","Illegal"], ans:"Void", diff:"medium"},
+  {q:"Which section deals with free consent?", opts:["Section 14","Section 10","Section 15","Section 16"], ans:"Section 14", diff:"medium"},
+  {q:"Coercion is defined in which section?", opts:["Section 15","Section 16","Section 17","Section 18"], ans:"Section 15", diff:"medium"},
+  {q:"Which section defines fraud?", opts:["Section 17","Section 18","Section 19","Section 20"], ans:"Section 17", diff:"medium"},
+  {q:"Misrepresentation is covered by which section?", opts:["Section 18","Section 19","Section 17","Section 16"], ans:"Section 18", diff:"medium"},
+  {q:"Undue influence is defined in which section?", opts:["Section 16","Section 15","Section 17","Section 18"], ans:"Section 16", diff:"medium"},
+  {q:"Which sections cover breach remedies (damages)?", opts:["Section 73-75","Section 60-62","Section 20-22","Section 10-12"], ans:"Section 73-75", diff:"medium"},
+  {q:"Quasi-contracts are in which chapter/section range?", opts:["Sections 68-72","Sections 10-15","Sections 20-25","Sections 30-35"], ans:"Sections 68-72", diff:"medium"},
+  {q:"Contingent contracts are dealt with in which section?", opts:["Section 31","Section 32","Section 30","Section 33"], ans:"Section 31", diff:"medium"},
+  {q:"Communication of acceptance is governed by which section?", opts:["Section 4","Section 5","Section 6","Section 7"], ans:"Section 4", diff:"medium"},
+  {q:"Bailment is defined under which section?", opts:["Section 148","Section 149","Section 150","Section 151"], ans:"Section 148", diff:"medium"},
+  {q:"Pledge is defined under which section?", opts:["Section 172","Section 173","Section 174","Section 175"], ans:"Section 172", diff:"medium"},
+  {q:"Who is pawnee (in pledge)?", opts:["Person taking goods as security","Person giving goods","Agent","Creditor"], ans:"Person taking goods as security", diff:"medium"},
+  {q:"Who is bailor?", opts:["Person delivering goods","Person receiving goods","Agent","Surety"], ans:"Person delivering goods", diff:"easy"},
+  {q:"Who is bailee?", opts:["Person receiving goods","Person delivering goods","Agent","Guarantor"], ans:"Person receiving goods", diff:"easy"},
+  {q:"Guarantee is defined under which section?", opts:["Section 126","Section 127","Section 128","Section 129"], ans:"Section 126", diff:"medium"},
+  {q:"Indemnity is defined under which section?", opts:["Section 124","Section 125","Section 126","Section 127"], ans:"Section 124", diff:"medium"},
+  {q:"Agency is defined under which section?", opts:["Section 182","Section 183","Section 184","Section 185"], ans:"Section 182", diff:"medium"},
+  {q:"Surety in a guarantee is?", opts:["Person giving guarantee","Person receiving guarantee","Bailor","Agent"], ans:"Person giving guarantee", diff:"easy"},
+  {q:"Indemnifier is?", opts:["Person promising compensation","Person who receives compensation","Agent","Surety"], ans:"Person promising compensation", diff:"easy"},
+  {q:"Which of these is an essential element of a valid contract?", opts:["Lawful consideration","Illegal object","Unenforceable term","None"], ans:"Lawful consideration", diff:"hard"},
+  {q:"A contract entered into under misrepresentation is generally:", opts:["Voidable","Void","Valid","Illegal"], ans:"Voidable", diff:"hard"},
+  {q:"When is time considered the essence of contract?", opts:["When parties intend it to be so","Always","Never","Only by court"], ans:"When parties intend it to be so", diff:"hard"},
+  {q:"In a voidable contract, who can rescind it?", opts:["The aggrieved party","Any stranger","The court automatically","The other party"], ans:"The aggrieved party", diff:"hard"},
+  {q:"Performance of a contract is defined under which section?", opts:["Section 37","Section 38","Section 39","Section 40"], ans:"Section 37", diff:"hard"},
+  {q:"Past consideration is generally:", opts:["Valid in India","Invalid everywhere","Always void","Must be written"], ans:"Valid in India", diff:"hard"},
+  {q:"A contract in restraint of trade is:", opts:["Void","Valid","Voidable","Enforceable"], ans:"Void", diff:"hard"},
+  {q:"What is 'novation' in contract law?", opts:["Substituting a new contract/party","Breaking a contract","Performing a contract","Revoking an offer"], ans:"Substituting a new contract/party", diff:"hard"},
+  {q:"Appropriation of payments is covered under which principle?", opts:["Application of Payments","Breach rules","Performance rules","Offer rules"], ans:"Application of Payments", diff:"hard"},
+  {q:"The doctrine of frustration is codified in which section (law of contracts)?", opts:["Section 56","Section 57","Section 55","Section 54"], ans:"Section 56", diff:"hard"},
+  {q:"Who may be an agent?", opts:["Any person with capacity","Minor","Person of unsound mind","None"], ans:"Any person with capacity", diff:"medium"},
+  {q:"Consideration must be lawful as per?", opts:["Section 23","Section 22","Section 21","Section 24"], ans:"Section 23", diff:"medium"},
+  {q:"If a contract is impossible to perform it becomes:", opts:["Void","Valid","Voidable","Quasi-contract"], ans:"Void", diff:"hard"},
+  {q:"Which section deals with agreements in restraint of trade?", opts:["Section 27","Section 28","Section 29","Section 30"], ans:"Section 27", diff:"hard"},
+  {q:"A guarantee discharges when?", opts:["Principal debt is paid","Principal debtor dies","Creditor dies","None"], ans:"Principal debt is paid", diff:"medium"}
+];
+
+/* Utility */
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* Maze generation */
+const canvas = document.getElementById('maze');
+canvas.width = COLS * CELL;
+canvas.height = ROWS * CELL;
+const ctx = canvas.getContext('2d');
+
+const DIRS = [
+  {dx:0,dy:-1,bit:1,opp:2}, {dx:1,dy:0,bit:4,opp:8},
+  {dx:0,dy:1,bit:2,opp:1}, {dx:-1,dy:0,bit:8,opp:4}
+];
+
+let grid = [];
+function genMaze(){
+  grid = Array.from({length:ROWS},()=>Array(COLS).fill(0));
+  const stack = [];
+  const visited = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  let cx = 0, cy = ROWS-1;
+  visited[cy][cx] = true;
+  stack.push({x:cx,y:cy});
+  while(stack.length){
+    const cur = stack[stack.length-1];
+    const {x,y} = cur;
+    const neighbors = [];
+    for(let i=0;i<DIRS.length;i++){
+      const nx = x + DIRS[i].dx;
+      const ny = y + DIRS[i].dy;
+      if(nx>=0 && nx<COLS && ny>=0 && ny<ROWS && !visited[ny][nx]) neighbors.push({i,nx,ny});
+    }
+    if(neighbors.length===0) stack.pop();
+    else {
+      const pick = neighbors[Math.floor(Math.random()*neighbors.length)];
+      const dir = DIRS[pick.i];
+      grid[y][x] |= dir.bit;
+      grid[pick.ny][pick.nx] |= dir.opp;
+      visited[pick.ny][pick.nx] = true;
+      stack.push({x:pick.nx,y:pick.ny});
+    }
+  }
+}
+
+/* Game state */
+let player = {x:0,y:ROWS-1};
+let goal = {x:COLS-1,y:0};
+let checkpoints = new Set();
+let checkpointList = [];
+let selectedQuestions = [];
+let currentQuestionIndex = 0;
+let score = 0;
+let livesLeft = 3;
+
+/* pick questions */
+function pickQuestions(){
+  const pool = QUESTION_POOL.slice();
+  shuffle(pool);
+  const easy = pool.filter(p=>p.diff==="easy");
+  const med = pool.filter(p=>p.diff==="medium");
+  const hard = pool.filter(p=>p.diff==="hard");
+  shuffle(easy); shuffle(med); shuffle(hard);
+  const sel = [].concat(easy.slice(0,7), med.slice(0,7), hard.slice(0,6));
+  while(sel.length < QUESTIONS_PER_GAME && pool.length) sel.push(pool.pop());
+  shuffle(sel);
+  return sel.slice(0,QUESTIONS_PER_GAME);
+}
+
+/* place checkpoints */
+function placeCheckpoints(){
+  checkpoints.clear(); checkpointList = [];
+  let openCells = [];
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    if((x===player.x && y===player.y) || (x===goal.x && y===goal.y)) continue;
+    openCells.push({x,y});
+  }
+  shuffle(openCells);
+  for(let i=0;i<Math.min(CHECKPOINT_COUNT, openCells.length); i++){
+    const c = openCells[i]; const key = `${c.x},${c.y}`;
+    checkpoints.add(key); checkpointList.push({x:c.x,y:c.y});
+  }
+}
+
+/* rendering */
+function drawMaze(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#eef6ff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.lineWidth = 3; ctx.strokeStyle = "#2b3b50";
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const cx = x*CELL, cy = y*CELL;
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(cx+1,cy+1,CELL-2,CELL-2);
+    const cellMask = grid[y][x];
+    if((cellMask & 1) === 0){ ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+CELL,cy); ctx.stroke(); }
+    if((cellMask & 2) === 0){ ctx.beginPath(); ctx.moveTo(cx,cy+CELL); ctx.lineTo(cx+CELL,cy+CELL); ctx.stroke(); }
+    if((cellMask & 4) === 0){ ctx.beginPath(); ctx.moveTo(cx+CELL,cy); ctx.lineTo(cx+CELL,cy+CELL); ctx.stroke(); }
+    if((cellMask & 8) === 0){ ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy+CELL); ctx.stroke(); }
+  }
+  for(const key of checkpoints){ const [x,y]=key.split(",").map(Number); drawCircle(x,y,"#ffd9b3","#cc7a00","Q"); }
+  drawCircle(goal.x,goal.y, getComputedStyle(document.documentElement).getPropertyValue('--cheese').trim() || "#ffda4a", "#b07f00", "🧀");
+  drawCircle(player.x,player.y, getComputedStyle(document.documentElement).getPropertyValue('--mouse').trim() || "#3b82f6", "#082f74", "🐭");
+}
+function drawCircle(cxCell, cyCell, fill, stroke, label){
+  const cx = cxCell*CELL, cy = cyCell*CELL;
+  const cxCenter = cx + CELL/2, cyCenter = cy + CELL/2;
+  ctx.beginPath(); ctx.fillStyle = fill; ctx.strokeStyle = stroke; ctx.lineWidth = 2;
+  ctx.arc(cxCenter, cyCenter, CELL*0.36, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.font = `${Math.max(18, CELL*0.5)}px serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#071029"; ctx.fillText(label, cxCenter, cyCenter + 1);
+}
+
+/* movement/collision */
+function canMove(x,y,dirIndex){
+  const mask = grid[y][x];
+  if(dirIndex===0) return (mask & 1) !== 0;
+  if(dirIndex===1) return (mask & 4) !== 0;
+  if(dirIndex===2) return (mask & 2) !== 0;
+  if(dirIndex===3) return (mask & 8) !== 0; return false;
+}
+function movePlayer(dx,dy){
+  let dirIndex=-1; if(dx===0 && dy===-1) dirIndex=0; if(dx===1 && dy===0) dirIndex=1;
+  if(dx===0 && dy===1) dirIndex=2; if(dx===-1 && dy===0) dirIndex=3; if(dirIndex===-1) return;
+  if(canMove(player.x,player.y,dirIndex)){
+    player.x += dx; player.y += dy; updateStatusText(""); drawMaze(); checkEvents();
+  } else updateStatusText("There's a wall!");
+}
+
+/* events */
+function checkEvents(){
+  const key = `${player.x},${player.y}`;
+  if(player.x === goal.x && player.y === goal.y){ showEnd(true); return; }
+  if(checkpoints.has(key)){ checkpoints.delete(key); askQuestion(); return; }
+}
+
+/* UI helpers */
+function updateScoreAndLives(){
+  document.getElementById('score').textContent = `Score: ${score}`;
+  document.getElementById('lives').textContent = `Lives: ${livesLeft}`;
+  document.getElementById('qcount').textContent = `Q: ${currentQuestionIndex} / ${QUESTIONS_PER_GAME}`;
+}
+function updateStatusText(text){ document.getElementById('statusText').textContent = text; }
+
+/* quiz handling */
+const modal = document.getElementById('modal');
+const qtitle = document.getElementById('qtitle');
+const qdiff = document.getElementById('qdiff');
+const choicesDiv = document.getElementById('choices');
+const skipBtn = document.getElementById('skipBtn');
+
+function askQuestion(){
+  if(currentQuestionIndex >= selectedQuestions.length){ showEnd(true); return; }
+  const q = selectedQuestions[currentQuestionIndex]; currentQuestionIndex++; updateScoreAndLives();
+  qtitle.textContent = `Q${currentQuestionIndex}: ${q.q}`; qdiff.textContent = `Difficulty: ${q.diff}`; choicesDiv.innerHTML = "";
+  const opts = q.opts.slice(); shuffle(opts);
+  for(let i=0;i<opts.length;i++){
+    const btn = document.createElement('button'); btn.className='choice-btn'; btn.textContent=opts[i];
+    btn.onclick = ()=> {
+      Array.from(choicesDiv.children).forEach(c=>c.disabled=true);
+      if(opts[i] === q.ans){ btn.classList.add('correct'); score++; updateStatusText("✅ Correct!"); }
+      else { btn.classList.add('wrong'); updateStatusText(`❌ Wrong! Correct: ${q.ans}`); livesLeft--; }
+      updateScoreAndLives();
+      setTimeout(()=>{ modal.style.display='none'; if(livesLeft <= 0) showEnd(false); else drawMaze(); }, 1200);
+    };
+    choicesDiv.appendChild(btn);
+  }
+  skipBtn.onclick = () => { updateStatusText(`Skipped! Correct: ${q.ans}`); livesLeft--; updateScoreAndLives(); modal.style.display='none'; if(livesLeft <= 0) showEnd(false); };
+  modal.style.display = 'flex';
+}
+
+/* end & restart */
+function showEnd(won){
+  modal.style.display = 'none';
+  const overlay = document.createElement('div'); overlay.className='modal'; overlay.style.display='flex';
+  const box = document.createElement('div'); box.className='card';
+  const title = document.createElement('div'); title.style.fontSize='20px'; title.style.fontWeight='800'; title.style.marginBottom='8px';
+  title.textContent = won ? '🎉 You reached the cheese!' : '😞 Game Over';
+  const txt = document.createElement('div'); txt.textContent = won ? `Final Score: ${score} / ${selectedQuestions.length}` : `Final Score: ${score} / ${selectedQuestions.length} (out of lives)`; txt.style.marginBottom='12px';
+  const btnRow = document.createElement('div'); btnRow.style.display='flex'; btnRow.style.gap='8px';
+  const playAgain = document.createElement('button'); playAgain.className='btn'; playAgain.textContent='Play Again';
+  playAgain.onclick = ()=> { document.body.removeChild(overlay); restartGame(); };
+  const closeBtn = document.createElement('button'); closeBtn.className='btn'; closeBtn.textContent='Close';
+  closeBtn.onclick = ()=> { document.body.removeChild(overlay); };
+  btnRow.appendChild(playAgain); btnRow.appendChild(closeBtn);
+  box.appendChild(title); box.appendChild(txt); box.appendChild(btnRow);
+  overlay.appendChild(box); document.body.appendChild(overlay);
+}
+
+function restartGame(){
+  genMaze();
+  player = {x:0,y:ROWS-1}; goal = {x:COLS-1,y:0};
+  selectedQuestions = pickQuestions(); currentQuestionIndex = 0; score = 0; livesLeft = lives;
+  placeCheckpoints();
+  updateScoreAndLives(); drawMaze(); updateStatusText("New game started. Find the cheese!");
+}
+
+/* init & events */
+document.getElementById('upBtn').addEventListener('click', ()=> movePlayer(0,-1));
+document.getElementById('downBtn').addEventListener('click', ()=> movePlayer(0,1));
+document.getElementById('leftBtn').addEventListener('click', ()=> movePlayer(-1,0));
+document.getElementById('rightBtn').addEventListener('click', ()=> movePlayer(1,0));
+document.getElementById('restart').addEventListener('click', ()=> restartGame());
+document.getElementById('help').addEventListener('click', ()=> { alert("Move with arrow buttons, keyboard arrows or swipe. Step on a checkpoint to answer a question. Wrong answers cost life. Reach cheese to win. 20 questions per game."); });
+
+window.addEventListener('keydown', (e)=>{ if(e.key === "ArrowUp") movePlayer(0,-1); if(e.key === "ArrowDown") movePlayer(0,1); if(e.key === "ArrowLeft") movePlayer(-1,0); if(e.key === "ArrowRight") movePlayer(1,0); });
+
+let touchStartX=0, touchStartY=0;
+canvas.addEventListener('touchstart', (e)=> { const t = e.changedTouches[0]; touchStartX = t.clientX; touchStartY = t.clientY; }, {passive:true});
+canvas.addEventListener('touchend', (e)=> { const t = e.changedTouches[0]; const dx = t.clientX - touchStartX, dy = t.clientY - touchStartY; if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20){ if(dx > 0) movePlayer(1,0); else movePlayer(-1,0); } else if(Math.abs(dy) > 20){ if(dy > 0) movePlayer(0,1); else movePlayer(0,-1); } }, {passive:true});
+
+/* first run */
+window.addEventListener('load', ()=> { initGame(); });
+function initGame(){ genMaze(); player = {x:0,y:ROWS-1}; goal = {x:COLS-1,y:0}; selectedQuestions = pickQuestions(); currentQuestionIndex = 0; score = 0; livesLeft = lives; placeCheckpoints(); updateScoreAndLives(); drawMaze(); updateStatusText("Find the cheese 🧀 — answer questions at checkpoints."); }
+</script>
+</body>
+</html>
